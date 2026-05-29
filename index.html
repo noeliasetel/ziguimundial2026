@@ -1,24 +1,30 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experiencia RA - Portería</title>
+    
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
     
     <style>
-        body { margin: 0; overflow: hidden; }
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+        }
     </style>
 </head>
 <body>
 
-    <a-scene mindar-image="imageTargetSrc: ./porteria.mind; filterMinCF:0.001; filterBeta: 0.01;" 
+    <a-scene mindar-image="imageTargetSrc: ./porteria.mind; filterMinCF:0.001; filterBeta: 0.01; uiLoading: yes; uiError: yes;" 
              color-space="sRGB" 
              renderer="colorManagement: true, sortObjects: true" 
              vr-mode-ui="enabled: false" 
              device-orientation-permission-ui="enabled: false">
       
       <a-assets>
-        <video id="mi-video" src="./video.mp4" preload="auto" loop="true" playsinline webkit-playsinline></video>
+        <video id="mi-video" src="./video.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted></video>
       </a-assets>
 
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
@@ -30,15 +36,18 @@
     </a-scene>
 
     <script>
-      // Este script detecta cuando la cámara ve la portería para reproducir el video, 
-      // y lo pausa cuando el usuario deja de apuntar a la portería.
+      // Controladores para reproducir el video solo cuando el marcador está en pantalla
       const showEntity = document.querySelector('[mindar-image-target]');
       const myVideo = document.querySelector('#mi-video');
 
+      // Cuando la cámara detecta la portería
       showEntity.addEventListener("targetFound", event => {
-        myVideo.play();
+        myVideo.play().catch(error => {
+          console.log("El navegador bloqueó el autoplay a pesar del muted:", error);
+        });
       });
 
+      // Cuando la cámara pierde de vista la portería
       showEntity.addEventListener("targetLost", event => {
         myVideo.pause();
       });
