@@ -1,133 +1,138 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RA Video sin Fondo</title>
-    
-    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    
-    <script>
-        // Shader para quitar el fondo verde (#00ff00)
-        AFRAME.registerShader('chromakey', {
-            schema: {
-                src: {type: 'map'},
-                color: {type: 'color', default: '#00ff00'},
-                similarity: {type: 'float', default: 0.3},
-                smoothness: {type: 'float', default: 0.1}
-            },
-            init: function(data) {
-                this.texture = new THREE.VideoTexture(data.src);
-                this.texture.minFilter = THREE.LinearFilter;
-                this.texture.magFilter = THREE.LinearFilter;
-                this.texture.format = THREE.RGBAFormat;
-                this.material = new THREE.ShaderMaterial({
-                    uniforms: {
-                        texture1: { type: 't', value: this.texture },
-                        color: { type: 'c', value: new THREE.Color(data.color) },
-                        similarity: { type: 'f', value: data.similarity },
-                        smoothness: { type: 'f', value: data.smoothness }
-                    },
-                    vertexShader: `
-                        varying vec2 vUv;
-                        void main() {
-                            vUv = uv;
-                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                        }
-                    `,
-                    fragmentShader: `
-                        varying vec2 vUv;
-                        uniform sampler2D texture1;
-                        uniform vec3 color;
-                        uniform float similarity;
-                        uniform float smoothness;
-                        void main() {
-                            vec4 videoColor = texture2D(texture1, vUv);
-                            float diff1 = distance(videoColor.rgb, color);
-                            float alpha = smoothstep(similarity, similarity + smoothness, diff1);
-                            gl_FragColor = vec4(videoColor.rgb, videoColor.a * alpha);
-                        }
-                    `,
-                    transparent: true
-                });
-            },
-            update: function(oldData) {
-                this.material.uniforms.texture1.value = new THREE.VideoTexture(this.data.src);
-            }
-        });
+  <meta charset="utf-8">
+  <title>AR Video</title>
 
-        // Controlador de reproducción automática
-        AFRAME.registerComponent('vidhandler', {
-            init: function () {
-                this.toggle = false;
-                this.vid = document.querySelector("#videoPersonaje");
-                this.vid.pause();
-            },
-            tick: function () {
-                if (this.el.object3D.visible == true) {
-                    if (!this.toggle) {
-                        this.toggle = true;
-                        this.vid.play().catch(function(err){
-                            console.log("Esperando interacción del usuario");
-                        });
-                    }
-                } else {
-                    this.toggle = false;
-                    this.vid.pause();
-                }
-            }
-        });
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 
-        // Función para saltarse el bloqueo de reproducción del navegador
-        function iniciarAR() {
-            var elVideo = document.querySelector("#videoPersonaje");
-            elVideo.play(); // Fuerza la carga
-            elVideo.pause(); // Lo pausa hasta que vea el marcador
-            document.getElementById("botonInicio").style.display = "none"; // Oculta el botón
-        }
-    </script>
-    <style>
-        /* Estilo para el botón flotante de inicio */
-        #botonInicio {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 9999;
-            padding: 15px 30px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-    </style>
+  <!-- MindAR -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+  </style>
 </head>
-<body style="margin: 0; overflow: hidden;">
 
-    <button id="botonInicio" onclick="iniciarAR()">¡Toca aquí para Activar Cámara y Video!</button>
+<body>
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; facingMode: environment;">
-        
-        <a-assets>
-            <video id="videoPersonaje" src="download.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
-        </a-assets>
+<!-- VIDEO -->
+<video
+  id="video"
+  src="video.mp4"
+  loop
+  muted
+  playsinline
+  webkit-playsinline
+  crossorigin="anonymous"
+></video>
 
-        <a-marker preset="hiro" vidhandler>
-            <a-plane 
-                material="shader: chromakey; src: #videoPersonaje; color: 0.0 1.0 0.0" 
-                position="0 0.5 0" 
-                rotation="-90 0 0" 
-                width="2" 
-                height="2">
-            </a-plane>
-        </a-marker>
+<a-scene
+  mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js/examples/image-tracking/assets/card-example/card.mind;"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+  embedded
+  color-space="sRGB"
+  renderer="colorManagement: true, physicallyCorrectLights"
+>
 
-        <a-entity camera></a-entity>
-    </a-scene>
+  <a-assets>
+    <video
+      id="vid"
+      src="video.mp4"
+      autoplay
+      loop
+      muted
+      playsinline
+      webkit-playsinline
+      crossorigin="anonymous"
+    ></video>
+  </a-assets>
+
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+  <!-- TARGET -->
+  <a-entity mindar-image-target="targetIndex: 0">
+
+    <!-- VIDEO PLANO -->
+    <a-video
+      src="#vid"
+      position="0 0 0"
+      width="1"
+      height="1.8"
+      transparent="true"
+      material="shader: chromakey; src: #vid; color: 0 1 0"
+    >
+    </a-video>
+
+  </a-entity>
+
+</a-scene>
+
+<script>
+AFRAME.registerShader('chromakey', {
+  schema: {
+    src: {type: 'map'},
+    color: {type: 'vec3', default: {x: 0, y: 1, z: 0}}
+  },
+
+  init: function(data) {
+    this.material = new THREE.ShaderMaterial({
+      transparent: true,
+      uniforms: {
+        map: { value: data.src },
+        color: { value: new THREE.Vector3(
+          data.color.x,
+          data.color.y,
+          data.color.z
+        )}
+      },
+
+      vertexShader: `
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix *
+                        modelViewMatrix *
+                        vec4(position,1.0);
+        }
+      `,
+
+      fragmentShader: `
+        uniform sampler2D map;
+        uniform vec3 color;
+
+        varying vec2 vUv;
+
+        void main() {
+          vec4 tColor = texture2D(map, vUv);
+
+          float diff = distance(tColor.rgb, color);
+
+          if(diff < 0.4) discard;
+
+          gl_FragColor = tColor;
+        }
+      `
+    });
+  },
+
+  update: function() {},
+
+  tick: function() {},
+
+  remove: function() {},
+
+  pause: function() {},
+
+  play: function() {}
+});
+</script>
 
 </body>
 </html>
