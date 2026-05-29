@@ -1,66 +1,89 @@
-<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Experiencia RA - Cigüeña</title>
-    
+    <title>Cigüeña Mundial 2026</title>
     <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
-    
     <style>
         body { margin: 0; overflow: hidden; }
-        #loading-screen {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: #222; color: white;
-            display: flex; justify-content: center; align-items: center;
-            font-family: sans-serif; font-size: 18px; z-index: 9999;
-        }
     </style>
 </head>
 <body>
 
-    <div id="loading-screen">Iniciando cámara y cargando experiencia...</div>
+    <a-scene vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
+        
+        <a-assets>
+            <video id="cigueña-video" src="./Futbol.mp4" autoplay loop="true" playsinline webkit-playsinline muted crossorigin="anonymous"></video>
+        </a-assets>
 
-    <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiLoading: no; uiError: no;" 
-             color-space="sRGB" 
-             renderer="colorManagement: true, sortObjects: true" 
-             vr-mode-ui="enabled: false" 
-             device-orientation-permission-ui="enabled: false">
-      
-      <a-assets>
-        <video id="mi-video" src="./Futbol.mp4" preload="auto" loop="true" playsinline webkit-playsinline muted></video>
-      </a-assets>
+        <a-camera look-controls="enabled: false" wasd-controls="enabled: false" position="0 0 0"></a-camera>
 
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <a-entity position="0 0 -2.5">
+            
+            <a-image src="https://images.unsplash.com/photo-1518604666860-9ed391f76460?auto=format&fit=crop&w=800&q=80" 
+                     width="3.5" 
+                     height="2.5" 
+                     position="0 0 -0.1">
+            </a-image>
 
-      <a-entity mindar-image-target="targetIndex: 0">
-        <a-video src="#mi-video" width="1" height="0.56" position="0 0 0.1"></a-video>
-      </a-entity>
-      
+            <a-video src="#cigueña-video" 
+                     width="2" 
+                     height="2" 
+                     position="0 -0.2 0"
+                     material="shader: chroma; color: 1 1 1; similarity: 0.3; smoothness: 0.1">
+            </a-video>
+
+        </a-entity>
+
     </a-scene>
 
     <script>
-      const showEntity = document.querySelector('[mindar-image-target]');
-      const myVideo = document.querySelector('#mi-video');
-      const loadingScreen = document.getElementById('loading-screen');
-      const sceneEl = document.querySelector('a-scene');
-
-      // Oculta la pantalla de carga cuando la cámara está lista
-      sceneEl.addEventListener("renderstart", () => {
-         loadingScreen.style.display = 'none';
-      });
-
-      // Reproduce el video cuando detecta la imagen
-      showEntity.addEventListener("targetFound", event => {
-        myVideo.play().catch(e => console.log(e));
-      });
-
-      // Pausa el video cuando se pierde la imagen
-      showEntity.addEventListener("targetLost", event => {
-        myVideo.pause();
-      });
+        AFRAME.registerShader('chroma', {
+            schema: {
+                src: {type: 'map'},
+                color: {type: 'color', default: {r: 1.0, g: 1.0, b: 1.0}},
+                similarity: {type: 'number', default: 0.3},
+                smoothness: {type: 'number', default: 0.1}
+            },
+            init: function(data) {
+                this.textureLoader = new THREE.TextureLoader();
+                this.material = new THREE.ShaderMaterial({
+                    uniforms: {
+                        tex: {value: data.src},
+                        keyColor: {value: new THREE.Color(data.color)},
+                        similarity: {value: data.similarity},
+                        smoothness: {value: data.smoothness}
+                    },
+                    vertexShader: `
+                        varying vec2 vUv;
+                        void main() {
+                            vUv = uv;
+                            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                        }
+                    `,
+                    fragmentShader: `
+                        uniform sampler2D tex;
+                        uniform vec3 keyColor;
+                        uniform float similarity;
+                        uniform float smoothness;
+                        varying vec2 vUv;
+                        void main() {
+                            vec4 videoColor = texture2D(tex, vUv);
+                            float d = distance(videoColor.rgb, keyColor);
+                            float alpha = smoothstep(similarity, similarity + smoothness, d);
+                            gl_FragColor = vec4(videoColor.rgb, alpha);
+                        }
+                    `,
+                    transparent: true
+                });
+            },
+            update: function(data) {
+                this.material.uniforms.tex.value = data.src;
+                this.material.uniforms.keyColor.value = new THREE.Color(data.color);
+                this.material.uniforms.similarity.value = data.similarity;
+                this.material.uniforms.smoothness.value = data.smoothness;
+            }
+        });
     </script>
 </body>
 </html>
