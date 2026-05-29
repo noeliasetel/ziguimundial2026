@@ -9,6 +9,7 @@
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     
     <script>
+        // Shader para quitar el fondo verde (#00ff00)
         AFRAME.registerShader('chromakey', {
             schema: {
                 src: {type: 'map'},
@@ -56,6 +57,7 @@
             }
         });
 
+        // Controlador de reproducción automática
         AFRAME.registerComponent('vidhandler', {
             init: function () {
                 this.toggle = false;
@@ -66,7 +68,9 @@
                 if (this.el.object3D.visible == true) {
                     if (!this.toggle) {
                         this.toggle = true;
-                        this.vid.play();
+                        this.vid.play().catch(function(err){
+                            console.log("Esperando interacción del usuario");
+                        });
                     }
                 } else {
                     this.toggle = false;
@@ -74,14 +78,42 @@
                 }
             }
         });
+
+        // Función para saltarse el bloqueo de reproducción del navegador
+        function iniciarAR() {
+            var elVideo = document.querySelector("#videoPersonaje");
+            elVideo.play(); // Fuerza la carga
+            elVideo.pause(); // Lo pausa hasta que vea el marcador
+            document.getElementById("botonInicio").style.display = "none"; // Oculta el botón
+        }
     </script>
+    <style>
+        /* Estilo para el botón flotante de inicio */
+        #botonInicio {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            padding: 15px 30px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
 
-    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+    <button id="botonInicio" onclick="iniciarAR()">¡Toca aquí para Activar Cámara y Video!</button>
+
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; facingMode: environment;">
         
         <a-assets>
-            <video id="videoPersonaje" src="download.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline></video>
+            <video id="videoPersonaje" src="download.mp4" preload="auto" loop="true" crossorigin="anonymous" playsinline webkit-playsinline muted></video>
         </a-assets>
 
         <a-marker preset="hiro" vidhandler>
